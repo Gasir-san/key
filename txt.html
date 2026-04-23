@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер корректора: Работа с текстом</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .keyboard-key {
+            @apply bg-gray-200 border-b-4 border-gray-400 rounded px-2 py-1 text-sm font-bold inline-block mx-1;
+        }
+        .success-bg { animation: highlight 2s ease-in-out; }
+        @keyframes highlight {
+            0% { background-color: #dcfce7; }
+            100% { background-color: transparent; }
+        }
+        #editor {
+            min-height: 200px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .error-highlight {
+            background-color: #fee2e2;
+            border-bottom: 2px wavy #ef4444;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="bg-white rounded-xl p-6 shadow-sm border-l-8 border-blue-500">
+            <h1 class="text-2xl font-bold text-gray-800">🛠 Тренажер: Исправь текст проекта</h1>
+            <p class="text-gray-600 mt-2">
+                Используй <span class="keyboard-key">Ctrl+C</span> (копировать), 
+                <span class="keyboard-key">Ctrl+X</span> (вырезать) и 
+                <span class="keyboard-key">Ctrl+V</span> (вставить), чтобы привести текст в порядок.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Instructions and Tasks -->
+            <div class="md:col-span-1 space-y-4">
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <h3 class="font-bold text-blue-600 mb-2">📋 Твое задание:</h3>
+                    <ul class="text-sm space-y-3 text-gray-700">
+                        <li>1. Исправь ошибки: <b>"соберат"</b>, <b>"источнк"</b>, <b>"програмами"</b>.</li>
+                        <li>2. Поставь предложения в правильном порядке (как на картинке).</li>
+                        <li>3. Скопируй слово <b>"графический"</b> из банка слов в нужное место.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <h3 class="font-bold text-blue-800 mb-2">🏦 Банк слов (Ctrl+C здесь):</h3>
+                    <div id="word-bank" class="bg-white p-2 rounded border border-blue-200 text-center select-all cursor-pointer font-mono" title="Выдели и скопируй">
+                        графический
+                    </div>
+                    <p class="text-[10px] text-blue-500 mt-2 text-center">Выдели слово мышкой и нажми Ctrl+C</p>
+                </div>
+
+                <div id="status-box" class="bg-white rounded-xl p-4 shadow-sm text-center">
+                    <div id="check-btn" class="cursor-pointer bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full transition shadow-md">
+                        Проверить работу
+                    </div>
+                    <p id="feedback" class="mt-3 text-sm font-medium text-gray-500 italic"></p>
+                </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="md:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-200 focus-within:border-blue-400 transition">
+                    <div class="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Текстовый редактор</span>
+                        <div class="flex space-x-1">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                        </div>
+                    </div>
+                    <div 
+                        id="editor" 
+                        contenteditable="true" 
+                        class="p-6 focus:outline-none text-gray-800 text-lg outline-none"
+                        spellcheck="false"
+                    >Ты можешь одновременно пользоваться разными програмами. Обмениваться данными между ними. Для обработки рисунка нужен [МЕСТО ДЛЯ СЛОВА] редактор.
+
+Для проекта важно уметь соберат и обрабатывать информацию. Интернет – это источнк информации, который поможет сделать проект успешным. Во время подготовки проекта могут понадобиться текст, изображения, аудио- и видеозаписи. </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">Совет: Чтобы переместить предложение, выдели его, нажми Ctrl+X, поставь курсор в начало и нажми Ctrl+V.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl">
+            <div class="text-6xl">🏆</div>
+            <h2 class="text-2xl font-bold text-gray-800">Отлично!</h2>
+            <p class="text-gray-600">Ты успешно исправил все ошибки и восстановил структуру текста, используя горячие клавиши.</p>
+            <button onclick="location.reload()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition">Начать заново</button>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const checkBtn = document.getElementById('check-btn');
+        const feedback = document.getElementById('feedback');
+        const modal = document.getElementById('modal');
+
+        function highlightErrors() {
+            let content = editor.innerHTML;
+            
+            // Очищаем предыдущую подсветку перед новой проверкой
+            content = content.replace(/<span class="error-highlight">(.*?)<\/span>/g, '$1');
+            
+            const errorsToHighlight = ["соберат", "источнк", "програмами", "\\[МЕСТО ДЛЯ СЛОВА\\]"];
+            
+            errorsToHighlight.forEach(err => {
+                const regex = new RegExp(err, "g");
+                content = content.replace(regex, `<span class="error-highlight">$&</span>`);
+            });
+            
+            editor.innerHTML = content;
+        }
+
+        function checkProgress() {
+            const text = editor.innerText.trim();
+            let errors = [];
+
+            // 1. Проверка орфографии
+            if (text.includes("соберат")) errors.push("Исправь 'соберат' на 'собирать'");
+            if (text.includes("источнк")) errors.push("В слове 'источнк' пропущена буква 'и'");
+            if (text.includes("програмами")) errors.push("В слове 'программами' пишется две 'м'");
+            
+            // 2. Проверка порядка (первое предложение)
+            if (!text.startsWith("Для проекта")) errors.push("Текст должен начинаться с 'Для проекта...' (используй Ctrl+X и Ctrl+V)");
+
+            // 3. Проверка вставки слова
+            if (text.includes("[МЕСТО ДЛЯ СЛОВА]")) errors.push("Вставь слово 'графический' вместо скобок");
+            else if (!text.includes("графический")) errors.push("Слово 'графический' не найдено в тексте");
+
+            highlightErrors();
+
+            if (errors.length === 0) {
+                if (text.includes("собирать") && text.includes("источник") && text.includes("программами") && text.includes("графический")) {
+                    modal.style.display = 'flex';
+                } else {
+                    feedback.innerText = "Почти готово! Убедись, что текст выглядит как на образце.";
+                    feedback.className = "mt-3 text-sm font-medium text-orange-500";
+                }
+            } else {
+                feedback.innerText = errors[0];
+                feedback.className = "mt-3 text-sm font-medium text-red-500 underline decoration-dotted";
+            }
+        }
+
+        checkBtn.addEventListener('click', checkProgress);
+
+        // Визуальный отклик на вставку
+        editor.addEventListener('paste', () => {
+            editor.classList.add('success-bg');
+            setTimeout(() => editor.classList.remove('success-bg'), 1000);
+        });
+
+        // Убираем подсветку ошибок при начале редактирования пользователем
+        editor.addEventListener('input', () => {
+             feedback.innerText = "";
+        });
+    </script>
+</body>
+</html>
